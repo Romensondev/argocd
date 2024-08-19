@@ -1,0 +1,94 @@
+## Argo Configs
+configs:
+  params:
+    server.insecure: true
+    redis.server: "redis_host:6379"
+    redis.db: 1
+  ###############
+  # policy rbac #
+  ###############
+  rbac:
+    create: true
+    policy.csv: |
+      p, role:org-admin, applications, *, */*, allow
+      p, role:org-admin, clusters, get, *, allow
+      p, role:org-admin, repositories, get, *, allow
+      p, role:org-admin, repositories, create, *, allow
+      p, role:org-admin, repositories, update, *, allow
+      p, role:org-admin, repositories, delete, *, allow
+      p, role:org-admin, projects, get, *, allow
+      p, role:org-admin, projects, create, *, allow
+      p, role:org-admin, projects, update, *, allow
+      p, role:org-admin, projects, delete, *, allow
+      p, role:org-admin, logs, get, *, allow
+      p, role:org-admin, exec, create, */*, allow
+      g, ArgoCDAdmins, role:admin
+      # RO[
+      p, role:readonly, applications, get, */*, allow
+      p, role:readonly, applications, delete, */*, allow
+      g, readonly, role:readonly
+
+  #############
+  # configmap #
+  #############
+  cm:
+    url: https://your_domain.example/
+
+  ############
+  # Keycloak #
+  ############
+    oidc.config: |
+       name: Keycloak
+       issuer: "https://auth.your_keycloak_domain/realms/your_realms_name"
+       clientID: argocd
+       clientSecret: $oidc-keycloak
+       requestedScopes: ["openid", "profile", "email", "groups"]
+         #requestedScopes:
+         #- openid
+         #- profile
+         #- email
+         #- groups
+       requestedIDTokenClaims:
+         groups:
+           essential: true
+
+  ###################
+  # secret keycloak #
+  ###################
+  secret:
+    extra:
+      oidc-keycloak: "keycloak_secret_client"
+secretManifests:
+    - secrets.yaml
+
+#################
+# ingress nginx #
+#################
+server:
+  ingress:
+    enabled: true
+    hostname: your_domain.example
+    ingressClassName: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-real-ip-cidr: "0.0.0.0/0"
+    extraTls:
+      - hosts:
+        - your_domain.example
+        secretName: your_certificate_secret
+redis:
+  enabled: false
+
+argocdConfig:
+  configManagementPlugins: |
+    - name: keycloak
+      init:
+        command: ["argocd-keycloak"]
+      generate: |
+        command: ["argocd-keycloak", "generate"]
+      validate: |
+        command: ["argocd-keycloak", "validate"]
+  repositories: |
+    - url: https://github.com/argoproj/argocd-example-apps.git
+      sshPrivateKeySecret: |
+        name: argocd-repo-secret
+        key: sshPrivateKey
