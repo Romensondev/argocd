@@ -1,1 +1,18 @@
-
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dev-cluster-secret
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+stringData:
+  config: |
+    {
+      "bearerToken": "cluster_BearerToken",
+      "tlsClientConfig": {
+        "insecure": false,
+        "caData": "kubeadm_user_certificate"
+      }
+    }
+  name: kubernetes
+  server: https://kube_api_host:6443
+type: Opaque
